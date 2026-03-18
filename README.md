@@ -17,6 +17,12 @@ Recommended environment:
 - `numpy<2` for compatibility with the extension/toolchain used in this repo
 
 This project requires a CUDA-enabled GPU.
+Recommended environment:
+- Python 3.10
+- PyTorch 2.1.1 + CUDA 12.1 runtime
+- `numpy<2` for compatibility with the extension/toolchain used in this repo
+
+This project requires a CUDA-enabled GPU.
 This will not run on a device without a CUDA enabled graphics card.
 
 # Installation
@@ -28,19 +34,7 @@ Please install our environment with:
 and
 ```conda activate periodic_primitives```
 
-`conda_env.yml` is version-pinned to the validated stack. For reproducibility, avoid upgrading packages during installation.
-
-Then install the custom CUDA module:
-
-```bash
-bash scripts/install_periodic_primitives.sh
-```
-
-If you also want to run the `iNGP` model, install `tiny-cuda-nn` manually:
-
-```bash
-pip install "tinycudann @ git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch"
-```
+This will automatically install our CUDA module ```PeriodicPrimitives``` as well.
 
 ## Installation with uv (recommended)
 
