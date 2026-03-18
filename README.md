@@ -11,7 +11,12 @@ We see the combined efficiency of using waveforms with the efficiency of using g
 
 # Requirements
 
-Our requirements are Python 3.7 and CUDA 11 (we use CUDA 11.8 SDK with PyTorch compiled with CUDA 11.6).
+Recommended environment:
+- Python 3.10
+- PyTorch 2.1.1 + CUDA 12.1 runtime
+- `numpy<2` for compatibility with the extension/toolchain used in this repo
+
+This project requires a CUDA-enabled GPU.
 This will not run on a device without a CUDA enabled graphics card.
 
 # Installation
@@ -23,7 +28,19 @@ Please install our environment with:
 and
 ```conda activate periodic_primitives```
 
-This will automatically install our CUDA module ```PeriodicPrimitives``` as well.
+`conda_env.yml` is version-pinned to the validated stack. For reproducibility, avoid upgrading packages during installation.
+
+Then install the custom CUDA module:
+
+```bash
+bash scripts/install_periodic_primitives.sh
+```
+
+If you also want to run the `iNGP` model, install `tiny-cuda-nn` manually:
+
+```bash
+pip install "tinycudann @ git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch"
+```
 
 ## Installation with uv (recommended)
 
@@ -52,7 +69,7 @@ uv pip install "setuptools<70" packaging
 4. Build and install the custom CUDA extension:
 
 ```bash
-uv pip install --no-build-isolation ./CUDA_modules/PeriodicPrimitivesCUDA
+bash scripts/install_periodic_primitives.sh
 ```
 
 If you also want to run the `iNGP` model, install `tiny-cuda-nn` manually:
