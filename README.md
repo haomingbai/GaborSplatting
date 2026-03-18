@@ -34,7 +34,19 @@ Please install our environment with:
 and
 ```conda activate periodic_primitives```
 
-This will automatically install our CUDA module ```PeriodicPrimitives``` as well.
+`conda_env.yml` is version-pinned to the validated stack. For reproducibility, avoid upgrading packages during installation.
+
+Then install the custom CUDA module:
+
+```bash
+bash scripts/install_periodic_primitives.sh
+```
+
+If you also want to run the `iNGP` model, install `tiny-cuda-nn` manually:
+
+```bash
+pip install "tinycudann @ git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch"
+```
 
 ## Installation with uv (recommended)
 
