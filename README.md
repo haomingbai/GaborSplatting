@@ -25,6 +25,54 @@ and
 
 This will automatically install our CUDA module ```PeriodicPrimitives``` as well.
 
+## Installation with uv (recommended)
+
+This repository now includes a `pyproject.toml` and a `requirements-uv.txt` so you can manage the environment with `uv`.
+
+1. Create a local virtual environment:
+
+```bash
+uv venv --python 3.10
+```
+
+2. Install PyTorch CUDA wheels (CUDA 12.1):
+
+```bash
+uv pip install --index-url https://download.pytorch.org/whl/cu121 \
+	torch==2.1.1 torchvision==0.16.1 torchaudio==2.1.1
+```
+
+3. Install Python dependencies:
+
+```bash
+uv pip install -r requirements-uv.txt
+uv pip install "setuptools<70" packaging
+```
+
+4. Build and install the custom CUDA extension:
+
+```bash
+uv pip install --no-build-isolation ./CUDA_modules/PeriodicPrimitivesCUDA
+```
+
+If you also want to run the `iNGP` model, install `tiny-cuda-nn` manually:
+
+```bash
+uv pip install "tinycudann @ git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch"
+```
+
+5. Run training through `uv`:
+
+```bash
+uv run --no-sync python train.py --training_data pluto.png --save_name quickstart_uv
+```
+
+For a quick smoke test run, you can reduce the iteration count:
+
+```bash
+uv run --no-sync python train.py --training_data pluto.png --save_name smoke_uv --train_iterations 10 --fine_tune_iterations 0 --log_every 1 --log_image_every -1
+```
+
 # Training a model
 
 Please see examples of training a model in the ```scripts``` folder. 

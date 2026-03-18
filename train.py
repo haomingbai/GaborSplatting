@@ -27,6 +27,26 @@ data_folder = os.path.join(project_folder_path, "data")
 output_folder = os.path.join(project_folder_path, "output")
 save_folder = os.path.join(project_folder_path, "savedModels")
 
+
+def cuda_available_for(device_name):
+    return torch.cuda.is_available() and "cuda" in str(device_name)
+
+
+def maybe_cuda_empty_cache(device_name):
+    if cuda_available_for(device_name):
+        torch.cuda.empty_cache()
+
+
+def maybe_cuda_synchronize(device_name):
+    if cuda_available_for(device_name):
+        torch.cuda.synchronize()
+
+
+def maybe_cuda_max_memory_allocated(device_name):
+    if cuda_available_for(device_name):
+        return torch.cuda.max_memory_allocated(device_name)
+    return 0
+
 def log_scalars(writer, model, losses, i):
     with torch.no_grad():
         writer.add_scalar("Loss", losses['final_loss'].item(), i)     
@@ -83,9 +103,9 @@ def train_model(model, dataset, opt):
         
     dataloader = DataLoader(dataset, batch_size=None, num_workers=8 if "cpu" in opt['data_device'] else 0)
     dataloader = iter(dataloader)
-    torch.cuda.empty_cache()
-    max_VRAM = torch.cuda.max_memory_allocated(opt['device'])
-    torch.cuda.synchronize()
+    maybe_cuda_empty_cache(opt['device'])
+    max_VRAM = maybe_cuda_max_memory_allocated(opt['device'])
+    maybe_cuda_synchronize(opt['device'])
     start_train_time = time.time()
 
     # Train model
@@ -111,11 +131,11 @@ def train_model(model, dataset, opt):
         
         if(opt['profile']):
             profiler.step()
-        max_VRAM = max(max_VRAM, torch.cuda.max_memory_allocated(opt['device']))
+        max_VRAM = max(max_VRAM, maybe_cuda_max_memory_allocated(opt['device']))
 
     dataloader = None
     del dataloader
-    torch.cuda.synchronize()
+    maybe_cuda_synchronize(opt['device'])
     end_train_time = time.time()
     total_train_time = int(end_train_time - start_train_time)
     max_VRAM_MB = int(max_VRAM/1000000)
@@ -128,7 +148,7 @@ def train_model(model, dataset, opt):
             print(f"Creation of the directory {os.path.join(save_folder, save_name)} failed")
     save_options(opt, os.path.join(save_folder, save_name))
     model.save(os.path.join(save_folder, save_name))
-    torch.cuda.empty_cache()
+    maybe_cuda_empty_cache(opt['device'])
 
     # Test model
     with torch.no_grad():
@@ -154,14 +174,17 @@ def train_model(model, dataset, opt):
         #err_img = to_img(err.reshape(dataset.shape()))
         #del err
         #imageio.imwrite(os.path.join(output_folder, f"{save_name}_err.png"), err_img)
-        torch.cuda.empty_cache()
+        maybe_cuda_empty_cache(opt['device'])
 
         print("Computing metrics:")
+        iters = 0
+        ssim_sum = 0.0
+        lpips_sum = 0.0
         try:
             p = psnr(output.to(opt['data_device']),dataset.img).item()
             print(f"Final PSNR: {p:0.02f}")
             final_results["PSNR"] = p
-            torch.cuda.empty_cache()
+            maybe_cuda_empty_cache(opt['device'])
             writer.add_scalar("Params vs. PSNR", 
                             p, model.param_count())
             writer.add_scalar("Effective params vs. PSNR", 
@@ -176,10 +199,6 @@ def train_model(model, dataset, opt):
             output = output.reshape(dataset.shape()).permute(2,0,1)[None,...]
             dataset.img = dataset.img.permute(2,0,1)[None,...]
 
-            iters = 0
-            ssim_sum = 0.
-            lpips_sum = 0.
-
             for y in range(0, output.shape[2], 2048):
                 y_max = min(output.shape[2], y+2048)
                 for x in range(0, output.shape[3], 2048):
@@ -190,18 +209,23 @@ def train_model(model, dataset, opt):
                     ssim_sum += ssim_func(output_batch, img_batch)
                     lpips_sum += lpips_func(output_batch, img_batch)
                     iters += 1
-        except:
-            print("Error caught, likely OOM")
-        
-        print(f"Final SSIM: {ssim_sum/iters:0.03f}")
-        print(f"Final LPIPS: {lpips_sum/iters:0.03f}")
+        except Exception as exc:
+            print(f"Error caught while computing metrics: {exc}")
+
+        if iters > 0:
+            print(f"Final SSIM: {ssim_sum/iters:0.03f}")
+            print(f"Final LPIPS: {lpips_sum/iters:0.03f}")
+            final_results["SSIM"] = (ssim_sum / iters).item() if hasattr(ssim_sum / iters, "item") else float(ssim_sum / iters)
+            final_results["LPIPS"] = (lpips_sum / iters).item() if hasattr(lpips_sum / iters, "item") else float(lpips_sum / iters)
+        else:
+            print("Final SSIM/LPIPS: skipped")
 
         total_params = model.param_count()
         final_results['num_params'] = total_params
         print(f"Total num params: {total_params:,}")
         final_results['train_time'] = total_train_time
         final_results['VRAM_MB'] = max_VRAM_MB
-        torch.cuda.empty_cache()
+        maybe_cuda_empty_cache(opt['device'])
         with open(os.path.join(save_folder, save_name, "results.json"), 'w') as fp:
             json.dump(final_results, fp, indent=4)
 
@@ -262,11 +286,12 @@ if __name__ == '__main__':
     if(args['load_from'] is not None):
         opt = load_options(os.path.join(save_folder, 
                             args["load_from"]))
-        opt["device"] = args["device"]
+        if args["device"] is not None:
+            opt["device"] = args["device"]
         opt["save_name"] = args["load_from"]
         update_options_from_args(opt, args)
         dataset = create_dataset(opt)
-        model = load_model(opt, opt['device'])
+        model = load_model(opt, os.path.join(save_folder, args["load_from"]))
     else:
         opt = Options.get_default()
         update_options_from_args(opt, args)

@@ -3,7 +3,12 @@ from torch.utils.cpp_extension import load
 from torch.nn import Parameter
 import os
 import numpy as np
-import PeriodicPrimitives as periodic_primitives
+
+try:
+    import PeriodicPrimitives as periodic_primitives
+except Exception as exc:
+    periodic_primitives = None
+    _periodic_primitives_import_error = exc
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
 project_folder_path = os.path.join(project_folder_path, "..")
@@ -62,6 +67,12 @@ class PeriodicPrimitivesFunction(torch.autograd.Function):
         objects for use in the backward pass using the ctx.save_for_backward method.
         """
         
+        if periodic_primitives is None:
+            raise RuntimeError(
+                "PeriodicPrimitives CUDA extension is not available. "
+                "Install it with: uv pip install --no-build-isolation ./CUDA_modules/PeriodicPrimitivesCUDA"
+            ) from _periodic_primitives_import_error
+
         outputs = periodic_primitives.forward(x, 
             gaussian_colors, gaussian_positions, gaussian_scales,
             gaussian_rotations, topk_wave_coefficients, topk_wave_indices, 

@@ -1,0 +1,50 @@
+[project]
+name = "gabor-splatting"
+version = "0.1.0"
+description = "2D primitive-based scene representation with Gabor splatting"
+readme = "README.md"
+requires-python = ">=3.10,<3.11"
+dependencies = [
+    "imageio",
+    "numpy<2",
+    "scikit-image",
+    "scipy",
+    "tqdm",
+    "typing_extensions",
+    "matplotlib",
+    "oauthlib",
+    "packaging",
+    "tensorboard",
+    "torchmetrics",
+    "lpips",
+    "av",
+    "imageio[ffmpeg]",
+    "torch==2.1.1",
+    "torchvision==0.16.1",
+    "torchaudio==2.1.1",
+]
+
+[project.optional-dependencies]
+splats = [
+    "PeriodicPrimitives",
+]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu121" }
+torchvision = { index = "pytorch-cu121" }
+torchaudio = { index = "pytorch-cu121" }
+PeriodicPrimitives = { path = "CUDA_modules/PeriodicPrimitivesCUDA" }
+
+[tool.uv]
+index-strategy = "unsafe-best-match"
+
+[tool.uv.extra-build-dependencies]
+PeriodicPrimitives = ["torch==2.1.1", "setuptools<70", "packaging"]
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"

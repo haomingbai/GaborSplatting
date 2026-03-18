@@ -1,0 +1,14 @@
+imageio
+numpy<2
+scikit-image
+scipy
+tqdm
+typing_extensions
+matplotlib
+oauthlib
+packaging
+tensorboard
+torchmetrics
+lpips
+av
+imageio[ffmpeg]
